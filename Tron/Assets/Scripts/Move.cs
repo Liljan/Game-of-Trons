@@ -17,19 +17,38 @@ public class Move : NetworkBehaviour
 
     public GameObject ParticlePrefab;
 
-    public Color playerColor = Color.blue;
+    public Color playerColor;
 
     private List<GameObject> walls;
 
     private bool hasStarted;
 
+    // networking variables
+    private NetworkIdentity networkID;
+
+    // spawn data
+    public Color[] playerColors;
+
     // Use this for initialization
     void Start()
     {
+        networkID = this.gameObject.GetComponent<NetworkIdentity>();
+        int id = networkID.playerControllerId;
+        Debug.Log(id);
+        playerColor = playerColors[0];
+
         rb2d = this.gameObject.GetComponent<Rigidbody2D>();
         walls = new List<GameObject>();
-        SpawnWall();
+        CmdSpawnWall();
 
+        if(rb2d.position.x < 0.0f)
+        {
+            rb2d.velocity = Vector2.right * speed;
+        }
+        else
+        {
+            rb2d.velocity = Vector2.left * speed;
+        }
 
         //hasStarted = false;
         hasStarted = true;
@@ -38,35 +57,40 @@ public class Move : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (!isLocalPlayer)
+        {
+            return;
+        }
+
         if (hasStarted)
         {
             if (Input.GetAxis("Vertical") > 0.0f && rb2d.velocity.y == 0)
             {
                 rb2d.velocity = Vector2.up * speed;
-                SpawnWall();
+                CmdSpawnWall();
             }
             else if (Input.GetAxis("Vertical") < 0.0f && rb2d.velocity.y == 0)
             {
                 rb2d.velocity = Vector2.down * speed;
-                SpawnWall();
+                CmdSpawnWall();
             }
             else if (Input.GetAxis("Horizontal") < 0.0f && rb2d.velocity.x == 0)
             {
                 rb2d.velocity = Vector2.left * speed;
-                SpawnWall();
+                CmdSpawnWall();
             }
             else if (Input.GetAxis("Horizontal") > 0.0f && rb2d.velocity.x == 0)
             {
                 rb2d.velocity = Vector2.right * speed;
-                SpawnWall();
+                CmdSpawnWall();
             }
 
             FitColliderBetween(wallCollider, lastWallPos, transform.position);
         }
     }
 
-
-    void SpawnWall()
+    [Command]
+    void CmdSpawnWall()
     {
         // Save last wall's position
         lastWallPos = transform.position;
@@ -74,8 +98,7 @@ public class Move : NetworkBehaviour
         // Spawn a new Lightwall
         GameObject g = (GameObject)Instantiate(wallPrefab, transform.position, Quaternion.identity);
         g.GetComponent<SpriteRenderer>().color = playerColor;
-
-        Debug.Log(g.GetComponent<SpriteRenderer>().color);
+        NetworkServer.Spawn(g);
 
         wallCollider = g.GetComponent<Collider2D>();
         walls.Add(g);
