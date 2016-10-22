@@ -1,8 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class WallDestroy : MonoBehaviour {
-
+public class WallDestroy : MonoBehaviour
+{
     public GameObject Particles;
 
     void OnDestroy()

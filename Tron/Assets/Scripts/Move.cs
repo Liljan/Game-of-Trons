@@ -2,9 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public class Move : MonoBehaviour
+using UnityEngine.Networking;
+
+public class Move : NetworkBehaviour
 {
-    public KeyCode upKey, downKey, rightKey, leftKey;
     public float speed = 16f;
 
     private Rigidbody2D rb2d;
@@ -16,7 +17,7 @@ public class Move : MonoBehaviour
 
     public GameObject ParticlePrefab;
 
-    public Color playerColor;
+    public Color playerColor = Color.blue;
 
     private List<GameObject> walls;
 
@@ -29,7 +30,9 @@ public class Move : MonoBehaviour
         walls = new List<GameObject>();
         SpawnWall();
 
-        hasStarted = false;
+
+        //hasStarted = false;
+        hasStarted = true;
     }
 
     // Update is called once per frame
@@ -37,22 +40,22 @@ public class Move : MonoBehaviour
     {
         if (hasStarted)
         {
-            if (Input.GetKeyDown(upKey) && rb2d.velocity.y == 0)
+            if (Input.GetAxis("Vertical") > 0.0f && rb2d.velocity.y == 0)
             {
                 rb2d.velocity = Vector2.up * speed;
                 SpawnWall();
             }
-            else if (Input.GetKeyDown(downKey) && rb2d.velocity.y == 0)
+            else if (Input.GetAxis("Vertical") < 0.0f && rb2d.velocity.y == 0)
             {
                 rb2d.velocity = Vector2.down * speed;
                 SpawnWall();
             }
-            else if (Input.GetKeyDown(leftKey) && rb2d.velocity.x == 0)
+            else if (Input.GetAxis("Horizontal") < 0.0f && rb2d.velocity.x == 0)
             {
                 rb2d.velocity = Vector2.left * speed;
                 SpawnWall();
             }
-            else if (Input.GetKeyDown(rightKey) && rb2d.velocity.x == 0)
+            else if (Input.GetAxis("Horizontal") > 0.0f && rb2d.velocity.x == 0)
             {
                 rb2d.velocity = Vector2.right * speed;
                 SpawnWall();
@@ -62,6 +65,7 @@ public class Move : MonoBehaviour
         }
     }
 
+
     void SpawnWall()
     {
         // Save last wall's position
@@ -70,6 +74,9 @@ public class Move : MonoBehaviour
         // Spawn a new Lightwall
         GameObject g = (GameObject)Instantiate(wallPrefab, transform.position, Quaternion.identity);
         g.GetComponent<SpriteRenderer>().color = playerColor;
+
+        Debug.Log(g.GetComponent<SpriteRenderer>().color);
+
         wallCollider = g.GetComponent<Collider2D>();
         walls.Add(g);
     }
