@@ -57,7 +57,9 @@ public class NetworkPlayerController : NetworkBehaviour
     [Command]
     public void CmdMove(float x, float y)
     {
-        RpcMove(x, y);
+       // RpcMove(x, y);
+        vx = x;
+        vy = y;
     }
 
     [ClientRpc]
