@@ -5,6 +5,8 @@ using UnityEngine.Networking;
 public class NetworkPlayerController : NetworkBehaviour
 {
     public float speed = 1.0f;
+    private Color playerColor;
+    private string playerName;
 
     [SyncVar]
     private float vx, vy;
@@ -67,5 +69,16 @@ public class NetworkPlayerController : NetworkBehaviour
     {
         vx = x;
         vy = y;
+    }
+    public void SetColor(Color c)
+    {
+        playerColor = c;
+        this.GetComponent<SpriteRenderer>().color = playerColor;
+    }
+    public void SetName(string s)
+    {
+        playerName = s;
+        this.GetComponentInChildren<TextMesh>().text = playerName;
+        this.GetComponentInChildren<TextMesh>().color = playerColor;
     }
 }
