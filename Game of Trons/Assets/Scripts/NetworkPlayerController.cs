@@ -1,21 +1,46 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.Networking;
 
-public class NetworkPlayerController : MonoBehaviour {
-
+public class NetworkPlayerController : NetworkBehaviour
+{
     public float speed = 1.0f;
 
-	// Use this for initialization
-	void Start () {
+    [SyncVar]
+    private float vx, vy;
 
-	}
-	
-	// Update is called once per frame
-	void Update () {
+    // Use this for initialization
+    void Start()
+    {
+        vx = 0.0f;
+        vy = 0.0f;
+    }
 
-        float vx = Input.GetAxis("Horizontal") * speed * Time.deltaTime;
-        float vy = Input.GetAxis("Vertical") * speed * Time.deltaTime;
+    // Update is called once per frame
+    void Update()
+    {
+        // go left
+        if (Input.GetAxis("Horizontal") < 0.0f && vx == 0.0f)
+        {
+            vx = -speed;
+            vy = 0.0f;
+        }
+        else if (Input.GetAxis("Horizontal") > 0.0f && vx == 0.0f)
+        {
+            vx = speed;
+            vy = 0.0f;
+        }
+        else if (Input.GetAxis("Vertical") > 0.0f && vy == 0.0f)
+        {
+            vx = 0.0f;
+            vy = speed;
+        }
+        else if (Input.GetAxis("Vertical") < 0.0f && vy == 0.0f)
+        {
+            vx = 0.0f;
+            vy = -speed;
+        }
 
-        transform.Translate(vx, vy, 0.0f);
+        transform.Translate(vx * Time.deltaTime, vy * Time.deltaTime, 0.0f);
     }
 }
