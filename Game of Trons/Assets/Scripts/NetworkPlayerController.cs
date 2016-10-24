@@ -18,6 +18,8 @@ public class NetworkPlayerController : NetworkBehaviour
     private float vx, vy;
 
     private List<GameObject> walls;
+
+    [SyncVar]
     private Vector3 lastWallPos;
 
     public GameObject WallPrefab;
@@ -76,9 +78,10 @@ public class NetworkPlayerController : NetworkBehaviour
                 CmdSpawnWall();
             }
         }
+
         transform.Translate(vx * Time.deltaTime, vy * Time.deltaTime, 0.0f);
 
-        FitColliderBetween(wallCollider, lastWallPos, transform.position);
+        //  FitColliderBetween(wallCollider, lastWallPos, transform.position);
     }
 
     [Command]
@@ -90,18 +93,20 @@ public class NetworkPlayerController : NetworkBehaviour
         GameObject g = Instantiate(WallPrefab, transform.position, Quaternion.identity) as GameObject;
 
         NetworkServer.Spawn(g);
+
+        // do it locally first
         RpcSetWallColor(g);
 
-        wallCollider = g.GetComponent<Collider2D>();
-        RpcSetWallCollider(g);
+        // wallCollider = g.GetComponent<Collider2D>();
+        // RpcSetWallCollider(g);
 
         walls.Add(g);
     }
 
     [ClientRpc]
-    public void RpcSetWallCollider(GameObject c)
+    public void RpcSetWallCollider(GameObject g)
     {
-        // c.GetComponent<Collider2D>() = wallCollider;
+        wallCollider = g.GetComponent<Collider2D>();
     }
 
     public void FitColliderBetween(Collider2D co, Vector2 a, Vector2 b)
@@ -112,22 +117,26 @@ public class NetworkPlayerController : NetworkBehaviour
         // Scale it (horizontally or vertically)
         float dist = Vector2.Distance(a, b);
         if (a.x != b.x)
+        {
             co.transform.localScale = new Vector2(dist + 1, 1);
+        }
         else
+        {
             co.transform.localScale = new Vector2(1, dist + 1);
+        }
 
         CmdUpdateWallStretch(co.transform.localScale);
     }
 
     [Command]
-    public void CmdUpdateWallStretch(Vector3 stretch)
+    public void CmdUpdateWallStretch(Vector2 stretch)
     {
         wallCollider.transform.localScale = stretch;
-        //RpcUpdateWallCollider(stretch);
+        RpcUpdateWallStretch(stretch);
     }
 
     [ClientRpc]
-    public void RpcUpdateWallCollider(Vector3 stretch)
+    public void RpcUpdateWallStretch(Vector3 stretch)
     {
         wallCollider.transform.localScale = stretch;
     }
