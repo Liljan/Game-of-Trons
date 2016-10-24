@@ -3,6 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.Networking;
 
+/*
+Function prefixes:
+    Update: Updates variable locally
+    Cmd: Updates server version
+    Rpc: Updates client version from server
+*/
+
+
 public class NetworkPlayerController : NetworkBehaviour
 {
     public float speed = 1.0f;
@@ -11,7 +19,6 @@ public class NetworkPlayerController : NetworkBehaviour
     [SyncVar]
     public string playerName;
 
-    [SyncVar]
     private Collider2D wallCollider;
 
     [SyncVar]
@@ -20,7 +27,7 @@ public class NetworkPlayerController : NetworkBehaviour
     private List<GameObject> walls;
 
     [SyncVar]
-    private Vector3 lastWallPos;
+    private Vector2 lastWallPos;
 
     public GameObject WallPrefab;
 
@@ -32,11 +39,18 @@ public class NetworkPlayerController : NetworkBehaviour
 
         walls = new List<GameObject>();
 
-        CmdSetColor(playerColor);
-        CmdSetName(playerName);
+        // isLocalplayer ?
+        if (Network.isClient)
+        {
+            CmdSetColor(playerColor);
+            CmdSetName(playerName);
+        }
         Init();
 
-        CmdSpawnWall();
+        if (isLocalPlayer)
+        {
+            CmdSpawnWall();
+        }
     }
 
     // Update is called once per frame
@@ -79,11 +93,15 @@ public class NetworkPlayerController : NetworkBehaviour
             }
         }
 
-        transform.Translate(vx * Time.deltaTime, vy * Time.deltaTime, 0.0f);
+        if (wallCollider)
+        {
+            FitColliderBetween(wallCollider, lastWallPos, transform.position);
+        }
 
-        //  FitColliderBetween(wallCollider, lastWallPos, transform.position);
+        transform.Translate(vx * Time.deltaTime, vy * Time.deltaTime, 0.0f);
     }
 
+    // done on server
     [Command]
     public void CmdSpawnWall()
     {
@@ -91,14 +109,14 @@ public class NetworkPlayerController : NetworkBehaviour
 
         // spawn new lightwall locally
         GameObject g = Instantiate(WallPrefab, transform.position, Quaternion.identity) as GameObject;
+        g.GetComponent<SpriteRenderer>().color = playerColor;
 
         NetworkServer.Spawn(g);
-
-        // do it locally first
         RpcSetWallColor(g);
 
-        // wallCollider = g.GetComponent<Collider2D>();
-        // RpcSetWallCollider(g);
+        wallCollider = g.GetComponent<Collider2D>();
+        // update on all clients
+        RpcSetWallCollider(g);
 
         walls.Add(g);
     }
@@ -112,6 +130,10 @@ public class NetworkPlayerController : NetworkBehaviour
     public void FitColliderBetween(Collider2D co, Vector2 a, Vector2 b)
     {
         // Calculate the Center Position
+        Debug.Log(co);
+        Debug.Log(a);
+        Debug.Log(b);
+
         co.transform.position = a + (b - a) * 0.5f;
 
         // Scale it (horizontally or vertically)
@@ -124,22 +146,17 @@ public class NetworkPlayerController : NetworkBehaviour
         {
             co.transform.localScale = new Vector2(1, dist + 1);
         }
+        Vector2 stretch = co.transform.localScale;
 
-        CmdUpdateWallStretch(co.transform.localScale);
-    }
-
-    [Command]
-    public void CmdUpdateWallStretch(Vector2 stretch)
-    {
-        wallCollider.transform.localScale = stretch;
-        RpcUpdateWallStretch(stretch);
+        RpcSetWallStretch(stretch);
     }
 
     [ClientRpc]
-    public void RpcUpdateWallStretch(Vector3 stretch)
+    public void RpcSetWallStretch(Vector2 v)
     {
-        wallCollider.transform.localScale = stretch;
+        wallCollider.transform.localScale = v;
     }
+
 
     [ClientRpc]
     public void RpcSetWallColor(GameObject g)
@@ -166,10 +183,19 @@ public class NetworkPlayerController : NetworkBehaviour
         playerName = s;
     }
 
+    private void UpdateColor(Color v)
+    {
+        playerColor = v;
+    }
+
+    private void UpdateName(string s)
+    {
+        playerName = s;
+    }
+
     public void Init()
     {
-        // this.GetComponent<SpriteRenderer>().color = playerColor;
-        this.GetComponentInChildren<TextMesh>().text = playerName;
         this.GetComponentInChildren<TextMesh>().color = playerColor;
+        this.GetComponentInChildren<TextMesh>().text = playerName;
     }
 }
