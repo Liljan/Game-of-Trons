@@ -11,6 +11,7 @@ public class NetworkPlayerController : NetworkBehaviour
     [SyncVar]
     public string playerName;
 
+    [SyncVar]
     private Collider2D wallCollider;
 
     [SyncVar]
@@ -32,6 +33,8 @@ public class NetworkPlayerController : NetworkBehaviour
         CmdSetColor(playerColor);
         CmdSetName(playerName);
         Init();
+
+        CmdSpawnWall();
     }
 
     // Update is called once per frame
@@ -40,7 +43,7 @@ public class NetworkPlayerController : NetworkBehaviour
         if (isLocalPlayer)
         {
             // go left
-            if (Input.GetAxis("Horizontal") < 0.0f && vx == 0.0f)
+            if (Input.GetButtonDown("Left") && vx == 0.0f)
             {
                 vx = -speed;
                 vy = 0.0f;
@@ -48,7 +51,7 @@ public class NetworkPlayerController : NetworkBehaviour
                 CmdMove(vx, vy);
                 CmdSpawnWall();
             }
-            else if (Input.GetAxis("Horizontal") > 0.0f && vx == 0.0f)
+            else if (Input.GetButtonDown("Right") && vx == 0.0f)
             {
                 vx = speed;
                 vy = 0.0f;
@@ -56,7 +59,7 @@ public class NetworkPlayerController : NetworkBehaviour
                 CmdMove(vx, vy);
                 CmdSpawnWall();
             }
-            else if (Input.GetAxis("Vertical") > 0.0f && vy == 0.0f)
+            else if (Input.GetButtonDown("Up") && vy == 0.0f)
             {
                 vx = 0.0f;
                 vy = speed;
@@ -64,7 +67,7 @@ public class NetworkPlayerController : NetworkBehaviour
                 CmdMove(vx, vy);
                 CmdSpawnWall();
             }
-            else if (Input.GetAxis("Vertical") < 0.0f && vy == 0.0f)
+            else if (Input.GetButtonDown("Down") && vy == 0.0f)
             {
                 vx = 0.0f;
                 vy = -speed;
@@ -73,9 +76,9 @@ public class NetworkPlayerController : NetworkBehaviour
                 CmdSpawnWall();
             }
         }
-
-        // if (NetworkServer.active)
         transform.Translate(vx * Time.deltaTime, vy * Time.deltaTime, 0.0f);
+
+        FitColliderBetween(wallCollider, lastWallPos, transform.position);
     }
 
     [Command]
@@ -85,12 +88,48 @@ public class NetworkPlayerController : NetworkBehaviour
 
         // spawn new lightwall locally
         GameObject g = Instantiate(WallPrefab, transform.position, Quaternion.identity) as GameObject;
-       
+
         NetworkServer.Spawn(g);
         RpcSetWallColor(g);
 
         wallCollider = g.GetComponent<Collider2D>();
+        RpcSetWallCollider(g);
+
         walls.Add(g);
+    }
+
+    [ClientRpc]
+    public void RpcSetWallCollider(GameObject c)
+    {
+        // c.GetComponent<Collider2D>() = wallCollider;
+    }
+
+    public void FitColliderBetween(Collider2D co, Vector2 a, Vector2 b)
+    {
+        // Calculate the Center Position
+        co.transform.position = a + (b - a) * 0.5f;
+
+        // Scale it (horizontally or vertically)
+        float dist = Vector2.Distance(a, b);
+        if (a.x != b.x)
+            co.transform.localScale = new Vector2(dist + 1, 1);
+        else
+            co.transform.localScale = new Vector2(1, dist + 1);
+
+        CmdUpdateWallStretch(co.transform.localScale);
+    }
+
+    [Command]
+    public void CmdUpdateWallStretch(Vector3 stretch)
+    {
+        wallCollider.transform.localScale = stretch;
+        //RpcUpdateWallCollider(stretch);
+    }
+
+    [ClientRpc]
+    public void RpcUpdateWallCollider(Vector3 stretch)
+    {
+        wallCollider.transform.localScale = stretch;
     }
 
     [ClientRpc]
@@ -109,7 +148,7 @@ public class NetworkPlayerController : NetworkBehaviour
     [Command]
     public void CmdSetColor(Color c)
     {
-        playerColor = c;    
+        playerColor = c;
     }
 
     [Command]
@@ -120,7 +159,7 @@ public class NetworkPlayerController : NetworkBehaviour
 
     public void Init()
     {
-        this.GetComponent<SpriteRenderer>().color = playerColor;
+        // this.GetComponent<SpriteRenderer>().color = playerColor;
         this.GetComponentInChildren<TextMesh>().text = playerName;
         this.GetComponentInChildren<TextMesh>().color = playerColor;
     }
