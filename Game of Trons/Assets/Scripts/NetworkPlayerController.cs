@@ -26,6 +26,8 @@ public class NetworkPlayerController : NetworkBehaviour
 
     private List<GameObject> walls;
 
+    Vector2 stretch;
+
     [SyncVar]
     private Vector2 lastWallPos;
 
@@ -140,23 +142,25 @@ public class NetworkPlayerController : NetworkBehaviour
         float dist = Vector2.Distance(a, b);
         if (a.x != b.x)
         {
-            co.transform.localScale = new Vector2(dist + 1, 1);
+            co.transform.localScale = new Vector2(dist + 1.0f, 1.0f);
         }
-        else
+        else if (a.y != b.y)
         {
-            co.transform.localScale = new Vector2(1, dist + 1);
+            co.transform.localScale = new Vector2(1.0f, dist + 1.0f);
         }
-        Vector2 stretch = co.transform.localScale;
 
-        RpcSetWallStretch(stretch);
+        stretch = co.transform.localScale;
+
+        if (isServer)
+            RpcSetWallStretch(stretch);
     }
 
+    // on the clients
     [ClientRpc]
     public void RpcSetWallStretch(Vector2 v)
     {
         wallCollider.transform.localScale = v;
     }
-
 
     [ClientRpc]
     public void RpcSetWallColor(GameObject g)
